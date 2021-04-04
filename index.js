@@ -59,15 +59,16 @@ async function getWordCount(year = 2020, month = OCTOBER, removeUselessWords = t
         const { length: conferenceTalkLength } = conferenceTalks;
         console.log(`Found ${conferenceTalkLength} talks.`);
 
-        const talksPerWorker = Math.ceil(conferenceTalkLength / numCPUs);
+        const talksPerWorker = ~~(conferenceTalkLength / numCPUs);
+        const extraTalks = conferenceTalkLength % numCPUs;
 
         let conferenceWords = [];
         let workersFinished = 0;
 
         for (let i = 0; i < numCPUs; i++) {
             const worker = new Worker(__filename);
-            const start = i * talksPerWorker;
-            const end = (i + 1) * talksPerWorker;
+            const start = (i * talksPerWorker) + Math.min(i, extraTalks);
+            const end = ((i + 1) * talksPerWorker) + Math.min(i + 1, extraTalks);
             let msg = { id: i, conferenceTalkPortion: conferenceTalks.slice(start, end) };
             worker.postMessage(msg);
             worker.on('message', data => {

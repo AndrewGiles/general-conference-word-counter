@@ -1,2 +1,2 @@
 node_modules/
-.*conference.json
+**conference.json

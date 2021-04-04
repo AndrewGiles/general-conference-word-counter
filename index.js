@@ -40,7 +40,7 @@ async function getWords(path, removeUselessWords) {
     };
 }
 
-async function getWordCount(year = 2020, month = OCTOBER, removeUselessWords = true) {
+async function getWordCount(year = 2021, month = APRIL, removeUselessWords = true) {
     if (isMainThread) {
         console.log(`Getting conference talks from ${month} ${year}`);
 
@@ -119,4 +119,4 @@ async function getWordCount(year = 2020, month = OCTOBER, removeUselessWords = t
     }
 }
 
-getWordCount(2020, OCTOBER);
+getWordCount(2021, APRIL);

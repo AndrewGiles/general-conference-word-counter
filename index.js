@@ -73,7 +73,7 @@ async function getWordCount(year = 2021, month = APRIL, removeUselessWords = tru
             worker.postMessage(msg);
             worker.on('message', data => {
                 console.log(`worker data sent`);
-                conferenceWords.push(...JSON.parse(data));
+                conferenceWords.push(...data);
                 workersFinished++;
                 console.log(numCPUs, workersFinished);
                 if (workersFinished === numCPUs) {
@@ -97,7 +97,7 @@ async function getWordCount(year = 2021, month = APRIL, removeUselessWords = tru
                         })
                         .map(([word, wordCount], i) => `${i + 1}: ${(word.replace(/^./, l => l.toUpperCase()) + '                    ').slice(0, 20)}: ${wordCount}`);
 
-                    fs.writeFileSync(`${year}-${month}-conference.json`, JSON.stringify(allSortedWords));
+                    fs.writeFileSync(`${removeUselessWords ? 'core' : 'all'}-${year}-${month}-conference.json`, JSON.stringify(allSortedWords));
                     console.log('Complete!');
 
                 }
@@ -112,11 +112,11 @@ async function getWordCount(year = 2021, month = APRIL, removeUselessWords = tru
             Promise.allSettled(promises)
                 .then(conferenceWords => {
                     console.log(`Finished. Sending back ${conferenceWords.length} conference talks`);
-                    parentPort.postMessage(JSON.stringify(conferenceWords));
+                    parentPort.postMessage(conferenceWords);
                     process.exit();
                 });
         });
     }
 }
 
-getWordCount(2021, APRIL);
+getWordCount(2020, OCTOBER);

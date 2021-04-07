@@ -119,4 +119,4 @@ async function getWordCount(year = 2021, month = APRIL, removeUselessWords = tru
     }
 }
 
-getWordCount(2020, OCTOBER);
+getWordCount(2021, APRIL);

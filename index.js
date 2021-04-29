@@ -2,12 +2,12 @@ const puppeteer = require('puppeteer');
 const { Worker, isMainThread, parentPort } = require('worker_threads');
 const numCPUs = require('os').cpus().length;
 const fs = require('fs');
-const uselessWords = require('./uselessWords.json');
+const stopWords = require('./stopWords.json');
 
 const APRIL = '04';
 const OCTOBER = '10';
 
-async function getWords(path, removeUselessWords) {
+async function getWords(path, removeStopWords) {
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
     const link = `https://churchofjesuschrist.org${path}`;
@@ -29,18 +29,18 @@ async function getWords(path, removeUselessWords) {
 
     return {
         author,
-        allTalkWords: removeUselessWords ?
+        allTalkWords: removeStopWords ?
             allTalkWords.filter(word => (
                 (word.length > 2)
                 &&
-                !uselessWords.includes(word.toLowerCase())
+                !stopWords.includes(word.toLowerCase())
             ))
             :
             allTalkWords,
     };
 }
 
-async function getWordCount(year = 2021, month = APRIL, removeUselessWords = true) {
+async function getWordCount(year = 2021, month = APRIL, removeStopWords = true) {
     if (isMainThread) {
         console.log(`Getting conference talks from ${month} ${year}`);
 
@@ -77,7 +77,7 @@ async function getWordCount(year = 2021, month = APRIL, removeUselessWords = tru
                 workersFinished++;
                 console.log(numCPUs, workersFinished);
                 if (workersFinished === numCPUs) {
-
+                    
                     const wordsBySpeaker = conferenceWords.map(({ value }) => value).filter(Boolean);
 
                     console.log(`Getting all words...`);
@@ -90,16 +90,17 @@ async function getWordCount(year = 2021, month = APRIL, removeUselessWords = tru
 
                     console.log(`Sorting all unique words...`);
                     const allSortedWords = Object.entries(wordsByPopularity)
-                        .sort(([y, a], [z, b]) => {
-                            const sortValue = b - a;
-                            if (sortValue === 0) return z - y;
-                            return b - a;
-                        })
-                        .map(([word, wordCount], i) => `${i + 1}: ${(word.replace(/^./, l => l.toUpperCase()) + '                    ').slice(0, 20)}: ${wordCount}`);
+                        .sort(([wordA], [wordB]) => wordA < wordB ? -1 : 1)
+                        .sort(([, countA], [, countB]) => countB - countA)
+                        .map(([word, wordCount], i) => {
+                            const place = `${i + 1}`.padEnd(3, " ");
+                            const pascalCasedWord = word.replace(/^./, l => l.toUpperCase()).padEnd(24, " ");
+                            return `${place}: ${pascalCasedWord}: ${wordCount}`;
+                        });
 
-                    fs.writeFileSync(`${removeUselessWords ? 'core' : 'all'}-${year}-${month}-conference.json`, JSON.stringify(allSortedWords));
+                    const jsonFilePrefix = removeStopWords ? 'core' : 'all';
+                    fs.writeFileSync(`${jsonFilePrefix}-${year}-${month}-conference.json`, JSON.stringify(allSortedWords));
                     console.log('Complete!');
-
                 }
             })
         }
@@ -107,7 +108,7 @@ async function getWordCount(year = 2021, month = APRIL, removeUselessWords = tru
         parentPort.on('message', ({ id, conferenceTalkPortion }) => {
             console.log(`Worker ${id}: counting ${conferenceTalkPortion.length} talks.`);
             let promises = [];
-            conferenceTalkPortion.forEach(path => promises.push(getWords(path, removeUselessWords)));
+            conferenceTalkPortion.forEach(path => promises.push(getWords(path, removeStopWords)));
 
             Promise.allSettled(promises)
                 .then(conferenceWords => {
